@@ -4,7 +4,7 @@ const csv = require("csv-parser");
 const path = require("path");
 
 const app = express();
-
+app.use(express.json());
 
 const catalogPath = path.join(__dirname, "data", "catalog.csv");
 
@@ -20,7 +20,7 @@ function readCatalog() {
           title: row.title,
           topic: row.topic,
           qty: parseInt(row.quantity),
-          price: parseInt(row.price),
+          price: parseFloat(row.price),
         });
       })
       .on("end", () => resolve(books))
@@ -30,81 +30,104 @@ function readCatalog() {
 
 function writeCatalog(books) {
   let content = "id,title,topic,quantity,price\n";
-  for (let b of books) {
+
+  for (const b of books) {
     content += `${b.id},"${b.title}","${b.topic}",${b.qty},${b.price}\n`;
   }
+
   fs.writeFileSync(catalogPath, content);
 }
 
+//Search
 app.get("/search/:topic", async (req, res) => {
-  const topic = req.params.topic;
-  const books = await readCatalog();
+  try {
+    const topic = req.params.topic.trim().toLowerCase();
+    const books = await readCatalog();
 
-  const result = [];
-  for (let b of books) {
-    if (b.topic.toLowerCase() == topic.toLowerCase()) {
-      result.push({ id: b.id, title: b.title });
+    const result = books
+      .filter((b) => b.topic.toLowerCase() === topic)
+      .map((b) => ({
+        id: b.id,
+        title: b.title,
+      }));
+
+    console.log(`[CATALOG] search("${req.params.topic}")`);
+
+    if (result.length === 0) {
+      return res.status(404).json({ msg: "no books found" });
     }
-  }
 
-  if (result.length == 0) {
-    return res.status(404).json({ msg: "no books found" });
+    res.json(result);
+  } catch (err) {
+    console.error("[CATALOG] search error:", err.message);
+    res.status(500).json({ msg: "catalog read error" });
   }
-
-  res.json(result);
 });
 
+//Info
 app.get("/info/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-  const books = await readCatalog();
+  try {
+    const id = parseInt(req.params.id);
 
-  let book = null;
-  for (let b of books) {
-    if (b.id == id) {
-      book = b;
-      break;
+    if (isNaN(id)) {
+      return res.status(400).json({ msg: "invalid book id" });
     }
-  }
 
-  if (!book) {
-    return res.status(404).json({ msg: "no book found" });
-  }
+    const books = await readCatalog();
+    const book = books.find((b) => b.id === id);
 
-  res.json({
-    title: book.title,
-    quantity: book.qty,
-    price: book.price,
-  });
+    console.log(`[CATALOG] info(${id})`);
+
+    if (!book) {
+      return res.status(404).json({ msg: "no book found" });
+    }
+
+    res.json({
+      title: book.title,
+      quantity: book.qty,
+      price: book.price,
+    });
+  } catch (err) {
+    console.error("[CATALOG] info error:", err.message);
+    res.status(500).json({ msg: "catalog read error" });
+  }
 });
 
+//Update
 app.post("/update/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-  const books = await readCatalog();
+  try {
+    const id = parseInt(req.params.id);
 
-  let book = null;
-  for (let b of books) {
-    if (b.id == id) {
-      book = b;
-      break;
+    if (isNaN(id)) {
+      return res.status(400).json({ msg: "invalid book id" });
     }
+
+    const books = await readCatalog();
+    const book = books.find((b) => b.id === id);
+
+    console.log(`[CATALOG] update(${id})`);
+
+    if (!book) {
+      return res.status(404).json({ msg: "no book found" });
+    }
+
+    if (book.qty <= 0) {
+      return res.status(400).json({ msg: "out of stock" });
+    }
+
+    book.qty -= 1;
+    writeCatalog(books);
+
+    res.json({
+      msg: "updated",
+      new_qty: book.qty,
+    });
+  } catch (err) {
+    console.error("[CATALOG] update error:", err.message);
+    res.status(500).json({ msg: "catalog update error" });
   }
-
-  if (!book) {
-    return res.status(404).json({ msg: "no book found" });
-  }
-
-  if (book.qty <= 0) {
-    return res.status(400).json({ msg: "out of stock" });
-  }
-
-  book.qty -= 1;
-  writeCatalog(books);
-
-  res.json({
-    msg: "updated",
-    new_qty: book.qty,
-  });
 });
+
 app.listen(5001, () => {
-    console.log("Catalog service running on port 5001");
-  });
+  console.log("Catalog service running on port 5001");
+});

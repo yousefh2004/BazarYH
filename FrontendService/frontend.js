@@ -9,7 +9,7 @@ const orderURL = "http://localhost:5002";
 app.get("/search/:topic", async (req, res) => {
   const topic = req.params.topic;
   try {
-    const response = await axios.get(`${catalogURL}/search/${topic}`);
+    const response = await axios.get(`${catalogURL}/search/${encodeURIComponent(topic)}`);
     res.json(response.data);
   } catch (err) {
       if (err.response) {
