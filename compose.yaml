@@ -1,0 +1,22 @@
+services:
+  catalog-service:
+    build: ./CatalogService
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./CatalogService/data:/app/data
+
+  order-service:
+    build: ./OrderService
+    ports:
+      - "5002:5002"
+    depends_on:
+      - catalog-service
+
+  frontend-service:
+    build: ./FrontendService
+    ports:
+      - "5050:5000"
+    depends_on:
+      - catalog-service
+      - order-service
