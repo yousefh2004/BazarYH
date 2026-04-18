@@ -10,6 +10,8 @@ services:
     build: ./OrderService
     ports:
       - "5002:5002"
+    volumes:
+      - ./OrderService:/app
     depends_on:
       - catalog-service
 
