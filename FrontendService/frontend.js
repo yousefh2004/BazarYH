@@ -3,8 +3,8 @@ const axios = require("axios");
 
 const app = express();
 
-const catalogURL = "http://localhost:5001";
-const orderURL = "http://localhost:5002";
+const catalogURL = "http://catalog-service:5001";
+const orderURL = "http://order-service:5002";
 
 app.get("/search/:topic", async (req, res) => {
   const topic = req.params.topic;

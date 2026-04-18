@@ -6,7 +6,7 @@ const path = require("path");
 const app = express();
 app.use(express.json());
 
-const catalogURL = "http://localhost:5001";
+const catalogURL = "http://catalog-service:5001";
 const ordersPath = path.join(__dirname, "orders.txt");
 
 app.post("/purchase/:id", async (req, res) => {
