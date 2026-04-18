@@ -3,9 +3,11 @@ const axios = require("axios");
 
 const app = express();
 
+// Backend service URLs Docker
 const catalogURL = "http://catalog-service:5001";
 const orderURL = "http://order-service:5002";
 
+// Search requests to the catalog service
 app.get("/search/:topic", async (req, res) => {
   const topic = req.params.topic;
   try {
@@ -20,6 +22,7 @@ app.get("/search/:topic", async (req, res) => {
 
 });
 
+// Info requests to the catalog service
 app.get("/info/:id", async (req, res) => {
   const id = req.params.id;
   try {
@@ -33,6 +36,7 @@ app.get("/info/:id", async (req, res) => {
   }
 });
 
+// Purchase requests to the order service
 app.post("/purchase/:id", async (req, res) => {
   const id = req.params.id;
   try {

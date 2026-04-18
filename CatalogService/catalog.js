@@ -6,8 +6,10 @@ const path = require("path");
 const app = express();
 app.use(express.json());
 
+// CSV file stores the catalog data
 const catalogPath = path.join(__dirname, "data", "catalog.csv");
 
+// Reads all books from catalog.csv a
 function readCatalog() {
   return new Promise((resolve, reject) => {
     const books = [];
@@ -28,6 +30,7 @@ function readCatalog() {
   });
 }
 
+// Writes the updated book back to catalog.csv
 function writeCatalog(books) {
   let content = "id,title,topic,quantity,price\n";
 
@@ -38,7 +41,7 @@ function writeCatalog(books) {
   fs.writeFileSync(catalogPath, content);
 }
 
-//Search
+// Search books by topic
 app.get("/search/:topic", async (req, res) => {
   try {
     const topic = req.params.topic.trim().toLowerCase();
@@ -64,7 +67,7 @@ app.get("/search/:topic", async (req, res) => {
   }
 });
 
-//Info
+// Return information using id
 app.get("/info/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -93,7 +96,7 @@ app.get("/info/:id", async (req, res) => {
   }
 });
 
-//Update
+// Update the quantity of a book
 app.post("/update/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
