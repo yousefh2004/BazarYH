@@ -21,7 +21,7 @@ app.post("/purchase/:id", async (req, res) => {
     const response = await axios.get(`${catalogURL}/info/${id}`);
     const book = response.data;
 
-    if (!book || book.quantity <= 0) {
+    if (!book || book.stock <= 0) {
       return res.status(400).json({ msg: "out of stock" });
     }
 
