@@ -1,24 +1,45 @@
 services:
-  catalog-service:
-    build: ./CatalogService
+
+  catalog-service-1:
+    build: ./CatalogReplica1
     ports:
       - "5001:5001"
     volumes:
-      - ./CatalogService/data:/app/data
+      - ./CatalogReplica1/data:/app/data
 
-  order-service:
-    build: ./OrderService
+  catalog-service-2:
+    build: ./CatalogReplica2
+    ports:
+      - "5003:5001"
+    volumes:
+      - ./CatalogReplica2/data:/app/data
+
+  order-service-1:
+    build: ./OrderReplica1
     ports:
       - "5002:5002"
     volumes:
-      - ./OrderService:/app
+      - ./OrderReplica1:/app
     depends_on:
-      - catalog-service
+      - catalog-service-1
+      - catalog-service-2
+
+  order-service-2:
+    build: ./OrderReplica2
+    ports:
+      - "5004:5002"
+    volumes:
+      - ./OrderReplica2:/app
+    depends_on:
+      - catalog-service-1
+      - catalog-service-2
 
   frontend-service:
     build: ./FrontendService
     ports:
       - "5050:5000"
     depends_on:
-      - catalog-service
-      - order-service
+      - catalog-service-1
+      - catalog-service-2
+      - order-service-1
+      - order-service-2

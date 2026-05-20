@@ -1,11 +1,11 @@
 const catalogServers = [
-    "http://localhost:5001",
-    "http://localhost:5002"
+    "http://catalog-service-1:5001",
+    "http://catalog-service-2:5001"
 ];
 
 const orderServers = [
-    "http://localhost:5003",
-    "http://localhost:5004"
+    "http://order-service-1:5002",
+    "http://order-service-2:5002"
 ];
 
 let catalogIndex = 0;
