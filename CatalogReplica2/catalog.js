@@ -9,10 +9,9 @@ app.use(express.json());
 
 const catalogPath = path.join(__dirname, "data", "catalog.csv");
 
-// other replica
+
 const otherReplicaURL = "http://catalog-service-1:5001";
 
-// same functions (unchanged)
 function readCatalog() {
   return new Promise((resolve, reject) => {
     const books = [];
@@ -29,7 +28,7 @@ function readCatalog() {
         });
       })
       .on("end", () => resolve(books))
-      .on("error", reject);
+      .on("error", (err) => reject(err));
   });
 }
 
@@ -44,60 +43,101 @@ function writeCatalog(books) {
 }
 
 app.get("/search/:topic", async (req, res) => {
-  const topic = req.params.topic.trim().toLowerCase();
-  const books = await readCatalog();
+  try {
+    const topic = req.params.topic.trim().toLowerCase();
+    const books = await readCatalog();
 
-  const result = books
-    .filter(b => b.topic.toLowerCase() === topic)
-    .map(b => ({ id: b.id, title: b.title }));
+    const result = books
+      .filter((b) => b.topic.toLowerCase() === topic)
+      .map((b) => ({
+        id: b.id,
+        title: b.title,
+      }));
 
-  res.json(result);
+    console.log(`[CATALOG 2] search("${req.params.topic}")`);
+
+    if (result.length === 0) {
+      return res.status(404).json({ msg: "no books found" });
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ msg: "catalog read error" });
+  }
 });
 
 app.get("/info/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
+  try {
+    const id = parseInt(req.params.id);
+    const books = await readCatalog();
+    const book = books.find((b) => b.id === id);
 
-  const books = await readCatalog();
-  const book = books.find(b => b.id === id);
+    console.log(`[CATALOG 2] info(${id})`);
 
-  if (!book) return res.status(404).json({ msg: "no book found" });
+    if (!book) {
+      return res.status(404).json({ msg: "no book found" });
+    }
 
-  res.json(book);
+    res.json(book);
+  } catch (err) {
+    res.status(500).json({ msg: "catalog read error" });
+  }
 });
 
 app.post("/update/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-
-  const books = await readCatalog();
-  const book = books.find(b => b.id === id);
-
-  book.stock -= 1;
-  writeCatalog(books);
-
   try {
-    await axios.post(`${otherReplicaURL}/replicate_update`, {
-      id: book.id,
-      stock: book.stock
-    });
-  } catch (err) {}
+    const id = parseInt(req.params.id);
 
-  res.json({ msg: "updated", stock: book.stock });
+    const books = await readCatalog();
+    const book = books.find((b) => b.id === id);
+
+    if (!book) {
+      return res.status(404).json({ msg: "no book found" });
+    }
+
+    if (book.stock <= 0) {
+      return res.status(400).json({ msg: "out of stock" });
+    }
+
+    book.stock -= 1;
+    writeCatalog(books);
+
+    console.log(`[CATALOG 2] update(${id}) new stock=${book.stock}`);
+
+    try {
+      await axios.post(`${otherReplicaURL}/replicate_update`, {
+        id: book.id,
+        stock: book.stock,
+      });
+    } catch (err) {
+      console.error("[CATALOG 2] replication error:", err.message);
+    }
+
+    res.json({ msg: "updated", stock: book.stock });
+  } catch (err) {
+    res.status(500).json({ msg: "catalog update error" });
+  }
 });
 
 app.post("/replicate_update", async (req, res) => {
-  const { id, stock } = req.body;
+  try {
+    const { id, stock } = req.body;
 
-  const books = await readCatalog();
-  const book = books.find(b => b.id === id);
+    const books = await readCatalog();
+    const book = books.find((b) => b.id === id);
 
-  if (book) {
-    book.stock = stock;
-    writeCatalog(books);
+    if (book) {
+      book.stock = stock;
+      writeCatalog(books);
+      console.log(`[CATALOG 2] replicated update(${id}) stock=${stock}`);
+    }
+
+    res.json({ msg: "replicated" });
+  } catch (err) {
+    res.status(500).json({ msg: "replication error" });
   }
-
-  res.json({ msg: "replicated" });
 });
 
-app.listen(5002, () => {
-  console.log("Catalog Replica 2 running on 5002");
+app.listen(5001, () => {
+  console.log("Catalog Replica 2 running on 5001");
 });
